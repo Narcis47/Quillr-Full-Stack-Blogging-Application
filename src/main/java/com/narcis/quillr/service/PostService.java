@@ -2,7 +2,11 @@ package com.narcis.quillr.service;
 
 import com.narcis.quillr.model.Post;
 import com.narcis.quillr.repository.PostRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -34,6 +38,16 @@ public class PostService {
         return postRepository.findByUserId(userId);
     }
 
+    public Page<Post> getPostByUserIdPaged(Long userId, int page, int size, String sortBy){
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
+        return postRepository.findByUserId(userId, pageable);
+    }
+
+    public Page<Post> getAllPostsPaged(int page, int size, String sortBy){
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, sortBy));
+        return postRepository.findAll(pageable);
+    }
+
     public boolean updatePost(Long id, String title, String content){
         Optional<Post> existingPost = postRepository.findById(id);
         if(existingPost.isPresent()){
@@ -53,5 +67,9 @@ public class PostService {
             return true;
         }
         return false;
+    }
+
+    public List<Post> searchPostsByTitle(String title){
+        return postRepository.findByTitleContainingIgnoreCase(title);
     }
 }

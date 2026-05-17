@@ -1,9 +1,8 @@
-# 🪶 Quillr API
+# 🪶 Quillr
 
-A robust RESTful API backend for a blogging or social platform — register users, customize personal profiles, and create, manage, or explore posts.
+A full-stack blogging platform — register, customize your profile, and create, manage or explore posts written by the community.
 
-Built with Java & Spring Boot, utilizing Spring Security for authentication and Spring Data Relational for database interactions.
-
+Built with Java & Spring Boot on the backend and vanilla HTML/CSS/JavaScript on the frontend.
 
 ---
 
@@ -11,10 +10,13 @@ Built with Java & Spring Boot, utilizing Spring Security for authentication and 
 
 - 🔐 User registration and secure login with BCrypt password hashing
 - 👤 Automatic profile creation upon registration
-- 🎨 Customize profiles with bio, avatar URL, and personal website links
-- 📝 Complete CRUD operations for posts (Create, Read, Update, Delete)
-- 🔍 Fetch posts globally or filter them by specific users
-- 🌍 Pre-configured CORS for local development and GitHub Pages deployment
+- 🎨 Customize profiles with bio, avatar URL, and personal website
+- 📝 Complete CRUD operations for posts
+- 🔍 Search posts by title across all users
+- 📄 Pagination and sorting for posts
+- ✅ Input validation with Jakarta Validation
+- 📖 Swagger UI for API documentation and testing
+- 🌍 CORS configured for local development and GitHub Pages
 
 ---
 
@@ -22,17 +24,21 @@ Built with Java & Spring Boot, utilizing Spring Security for authentication and 
 
 | Layer | Technology |
 |---|---|
-| Language | Java |
-| Framework | Spring Boot |
-| Database Mapper | Spring Data Relational |
+| Language | Java 21 |
+| Framework | Spring Boot 3.5 |
+| Database | PostgreSQL |
+| Database Mapper | Spring Data JDBC |
 | Security | Spring Security + BCrypt |
-| HTTP Client | RestTemplate |
+| Validation | Jakarta Validation |
+| API Docs | Swagger UI (SpringDoc OpenAPI) |
 | Utilities | Lombok |
-| Build Tool | Maven / Gradle |
+| Build Tool | Maven |
+| Frontend | HTML, CSS, JavaScript (Vanilla) |
 
 ---
 
 ## 📁 Project Structure
+
 ```
 Quillr/
 ├── src/main/java/com/narcis/quillr/
@@ -52,10 +58,13 @@ Quillr/
 │   │   ├── User.java
 │   │   ├── Profile.java
 │   │   └── Post.java
-│   ├── SecurityConfig.java           ← CORS & CSRF configuration
+│   ├── SecurityConfig.java
 │   └── QuillrApplication.java
-
+└── frontend/
+    ├── index.html      ← Login + Register (card swap animation)
+    └── home.html       ← Dashboard with editor and post list
 ```
+
 ---
 
 ## 🔌 API Endpoints
@@ -70,7 +79,7 @@ Quillr/
 ### Profiles
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/profile/{userId}` | Get user profile by User ID |
+| GET | `/api/profile/{userId}` | Get user profile |
 | PUT | `/api/profile/{userId}` | Update user profile |
 
 ### Posts
@@ -79,16 +88,28 @@ Quillr/
 | POST | `/api/posts/create` | Create a new post |
 | GET | `/api/posts/` | Get all posts |
 | GET | `/api/posts/{id}` | Get post by ID |
-| GET | `/api/posts/user/{userId}`| Get all posts by a specific user |
-| PUT | `/api/posts/{id}` | Update an existing post |
+| GET | `/api/posts/user/{userId}` | Get all posts by a user |
+| GET | `/api/posts/search?query=` | Search posts by title |
+| GET | `/api/posts/paged?page=0&size=10&sortBy=createdAt` | Get posts paginated |
+| GET | `/api/posts/user/{userId}/paged` | Get user posts paginated |
+| PUT | `/api/posts/{id}` | Update a post |
 | DELETE | `/api/posts/{id}` | Delete a post |
+
+---
+
+## 📖 API Documentation
+
+Swagger UI is available at:
+```
+http://localhost:8081/swagger-ui/index.html
+```
 
 ---
 
 ## 🗄️ Database Schema
 
 ```sql
-CREATE TABLE users(
+CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -96,7 +117,7 @@ CREATE TABLE users(
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE posts(
+CREATE TABLE posts (
     id SERIAL PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
@@ -105,15 +126,17 @@ CREATE TABLE posts(
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE profile(
+CREATE TABLE profile (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) UNIQUE ,
+    user_id INTEGER REFERENCES users(id) UNIQUE,
     bio TEXT,
     avatar_url VARCHAR(255),
     website VARCHAR(255)
 );
-
 ```
+
+---
+
 ## 🚀 Setup & Installation
 
 ### Prerequisites
@@ -125,8 +148,8 @@ CREATE TABLE profile(
 
 **1. Clone the repository**
 ```bash
-git clone https://github.com/Narcis47/Quillr-Full-Stack-Blogging-Application
-cd GameLogged
+git clone https://github.com/Narcis47/Quillr-Full-Stack-Blogging-Application.git
+cd Quillr-Full-Stack-Blogging-Application
 ```
 
 **2. Create the PostgreSQL database**
@@ -155,47 +178,59 @@ $env:DB_PASSWORD="your_postgres_password"
 ./mvnw spring-boot:run
 ```
 
-## 📝 Example API Requests
-**Register**
+The API runs at `http://localhost:8081`
+Swagger UI at `http://localhost:8081/swagger-ui/index.html`
 
+---
+
+## 📝 Example API Requests
+
+**Register**
 ```json
 POST /api/users/register
 {
-  "username": "narcis",
-  "email": "narcis@example.com",
-  "password": "securepassword"
+    "username": "narcis",
+    "email": "narcis@example.com",
+    "password": "securepassword"
 }
 ```
 
 **Login**
-
 ```json
 POST /api/users/login
 {
-  "email": "narcis@example.com",
-  "password": "securepassword"
-}
-```
-
-**Update Profile**
-
-```json
-PUT /api/profile/1
-{
-  "bio": "Software Developer & Writer",
-  "avatarUrl": "[https://imgur.com/myavatar.png](https://imgur.com/myavatar.png)",
-  "website": "[https://narcis47.github.io](https://narcis47.github.io)"
+    "email": "narcis@example.com",
+    "password": "securepassword"
 }
 ```
 
 **Create Post**
-
 ```json
 POST /api/posts/create
 {
-  "userId": 1,
-  "title": "My First Post on Quillr",
-  "content": "Hello world! This is my first entry on this platform."
+    "userId": 1,
+    "title": "My First Post on Quillr",
+    "content": "Hello world! This is my first entry."
+}
+```
+
+**Search Posts**
+```
+GET /api/posts/search?query=Death Note
+```
+
+**Get Posts Paginated**
+```
+GET /api/posts/paged?page=0&size=10&sortBy=createdAt
+```
+
+**Update Profile**
+```json
+PUT /api/profile/1
+{
+    "bio": "Software Developer & Writer",
+    "avatarUrl": "https://example.com/avatar.png",
+    "website": "https://narcis47.github.io"
 }
 ```
 

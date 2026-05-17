@@ -2,6 +2,11 @@ package com.narcis.quillr.controller;
 
 import com.narcis.quillr.model.Post;
 import com.narcis.quillr.service.PostService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,8 +17,13 @@ import java.util.Optional;
 @RequestMapping("/api/posts")
 public class PostController {
     private final PostService postService;
-    public record CreateRequest(Long userId, String title, String content) {}
-    public record UpdateRequest(String title, String content) {}
+    public record CreateRequest(
+            @NotNull Long userId,
+            @NotBlank @Size(min=3, max=255) String title,
+            @NotBlank String content) {}
+    public record UpdateRequest(
+            @NotBlank @Size(min=3, max=255) String title,
+            @NotBlank String content) {}
 
     public PostController(PostService postService) {
         this.postService = postService;
@@ -35,8 +45,30 @@ public class PostController {
         return ResponseEntity.ok(postService.getPostsByUserId(userId));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<List<Post>> searchPosts(@RequestParam String query){
+        return ResponseEntity.ok(postService.searchPostsByTitle(query));
+    }
+
+    @GetMapping("/paged")
+    public ResponseEntity<Page<Post>> getAllPostPaged(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy){
+        return ResponseEntity.ok(postService.getAllPostsPaged(page,size,sortBy));
+    }
+
+    @GetMapping("/user/{userId}/paged")
+    public ResponseEntity<Page<Post>> getPostsByUserIdPaged(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy){
+        return ResponseEntity.ok(postService.getPostByUserIdPaged(userId, page, size, sortBy));
+    }
+
     @PostMapping("/create")
-    public ResponseEntity<String> createPost(@RequestBody CreateRequest request){
+    public ResponseEntity<String> createPost(@Valid @RequestBody CreateRequest request){
         boolean post = postService.createPost(request.userId(), request.title(), request.content());
         if (post){
             return ResponseEntity.ok().body("Post created!");
@@ -45,7 +77,7 @@ public class PostController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updatePost(@PathVariable Long id, @RequestBody UpdateRequest request){
+    public ResponseEntity<String> updatePost(@PathVariable Long id,@Valid @RequestBody UpdateRequest request){
         boolean post = postService.updatePost(id, request.title(), request.content());
         if (post){
             return ResponseEntity.ok().body("Post updated!");
