@@ -24,6 +24,12 @@ public class UserController {
         return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/username/{username}")
+    public ResponseEntity<User> findByUsernameIgnoreCase(@PathVariable String username){
+        Optional<User> user = userService.findByUsernameIgnoreCase(username);
+        return user.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/register")
     public ResponseEntity<String> registerUser(@RequestBody RegisterRequest request){
         if(userService.registerUser(request.username(), request.email(), request.password())){

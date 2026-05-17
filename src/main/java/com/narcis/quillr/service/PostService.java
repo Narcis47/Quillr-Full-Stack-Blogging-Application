@@ -2,6 +2,7 @@ package com.narcis.quillr.service;
 
 import com.narcis.quillr.model.Post;
 import com.narcis.quillr.repository.PostRepository;
+import com.narcis.quillr.repository.UserRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -15,9 +16,11 @@ import java.util.Optional;
 @Service
 public class PostService {
     private final PostRepository postRepository;
+    private final UserRepository userRepository;
 
-    public PostService(PostRepository postRepository) {
+    public PostService(PostRepository postRepository, UserRepository userRepository) {
         this.postRepository = postRepository;
+        this.userRepository = userRepository;
     }
 
     public boolean createPost(Long userId, String title, String content){
@@ -36,6 +39,10 @@ public class PostService {
 
     public List<Post> getPostsByUserId(Long userId){
         return postRepository.findByUserId(userId);
+    }
+
+    public List<Post> getPostsByUsername(String username){
+        return userRepository.findByUsernameIgnoreCase(username).map(user -> postRepository.findByUserId(user.getId())).orElse(List.of());
     }
 
     public Page<Post> getPostByUserIdPaged(Long userId, int page, int size, String sortBy){

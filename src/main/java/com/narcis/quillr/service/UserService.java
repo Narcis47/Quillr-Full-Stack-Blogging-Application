@@ -42,4 +42,6 @@ public class UserService {
     public Optional<User> getUserById(Long id){
         return userRepository.findById(id);
     }
+
+    public Optional<User> findByUsernameIgnoreCase(String username) {return userRepository.findByUsernameIgnoreCase(username);}
 }

@@ -67,6 +67,11 @@ public class PostController {
         return ResponseEntity.ok(postService.getPostByUserIdPaged(userId, page, size, sortBy));
     }
 
+    @GetMapping("/user/username/{username}")
+    public ResponseEntity<List<Post>> getPostsByUsername(@PathVariable String username) {
+        return ResponseEntity.ok(postService.getPostsByUsername(username));
+    }
+
     @PostMapping("/create")
     public ResponseEntity<String> createPost(@Valid @RequestBody CreateRequest request){
         boolean post = postService.createPost(request.userId(), request.title(), request.content());

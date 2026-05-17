@@ -2,7 +2,7 @@
 
 A full-stack blogging platform — register, customize your profile, and create, manage or explore posts written by the community.
 
-Built with Java & Spring Boot on the backend and vanilla HTML/CSS/JavaScript on the frontend.
+Built with Java & Spring Boot on the backend.
 
 ---
 
@@ -11,12 +11,13 @@ Built with Java & Spring Boot on the backend and vanilla HTML/CSS/JavaScript on 
 - 🔐 User registration and secure login with BCrypt password hashing
 - 👤 Automatic profile creation upon registration
 - 🎨 Customize profiles with bio, avatar URL, and personal website
-- 📝 Complete CRUD operations for posts
-- 🔍 Search posts by title across all users
+- 📝 Complete CRUD operations for blog posts
+- 🔍 Search posts by title (case-insensitive) across all users
+- 👥 Find users by username (case-insensitive)
 - 📄 Pagination and sorting for posts
 - ✅ Input validation with Jakarta Validation
 - 📖 Swagger UI for API documentation and testing
-- 🌍 CORS configured for local development and GitHub Pages
+- 🌍 CORS configured for local and remote development
 
 ---
 
@@ -33,36 +34,31 @@ Built with Java & Spring Boot on the backend and vanilla HTML/CSS/JavaScript on 
 | API Docs | Swagger UI (SpringDoc OpenAPI) |
 | Utilities | Lombok |
 | Build Tool | Maven |
-| Frontend | HTML, CSS, JavaScript (Vanilla) |
 
 ---
 
 ## 📁 Project Structure
 
 ```
-Quillr/
-├── src/main/java/com/narcis/quillr/
-│   ├── controller/
-│   │   ├── UserController.java       ← /api/users
-│   │   ├── ProfileController.java    ← /api/profile
-│   │   └── PostController.java       ← /api/posts
-│   ├── service/
-│   │   ├── UserService.java
-│   │   ├── ProfileService.java
-│   │   └── PostService.java
-│   ├── repository/
-│   │   ├── UserRepository.java
-│   │   ├── ProfileRepository.java
-│   │   └── PostRepository.java
-│   ├── model/
-│   │   ├── User.java
-│   │   ├── Profile.java
-│   │   └── Post.java
-│   ├── SecurityConfig.java
-│   └── QuillrApplication.java
-└── frontend/
-    ├── index.html      ← Login + Register (card swap animation)
-    └── home.html       ← Dashboard with editor and post list
+src/main/java/com/narcis/quillr/
+├── controller/
+│   ├── UserController.java       ← /api/users
+│   ├── ProfileController.java    ← /api/profile
+│   └── PostController.java       ← /api/posts
+├── service/
+│   ├── UserService.java
+│   ├── ProfileService.java
+│   └── PostService.java
+├── repository/
+│   ├── UserRepository.java
+│   ├── ProfileRepository.java
+│   └── PostRepository.java
+├── model/
+│   ├── User.java
+│   ├── Profile.java
+│   └── Post.java
+├── SecurityConfig.java
+└── QuillrApplication.java
 ```
 
 ---
@@ -75,12 +71,14 @@ Quillr/
 | POST | `/api/users/register` | Register a new user |
 | POST | `/api/users/login` | Login |
 | GET | `/api/users/{id}` | Get user by ID |
+| GET | `/api/users/username/{username}` | Get user by username (case-insensitive) |
 
 ### Profiles
 | Method | Endpoint | Description |
 |---|---|---|
-| GET | `/api/profile/{userId}` | Get user profile |
-| PUT | `/api/profile/{userId}` | Update user profile |
+| GET | `/api/profile/{userId}` | Get profile by user ID |
+| GET | `/api/profile/username/{username}` | Get profile by username (case-insensitive) |
+| PUT | `/api/profile/{userId}` | Update profile |
 
 ### Posts
 | Method | Endpoint | Description |
@@ -88,9 +86,10 @@ Quillr/
 | POST | `/api/posts/create` | Create a new post |
 | GET | `/api/posts/` | Get all posts |
 | GET | `/api/posts/{id}` | Get post by ID |
-| GET | `/api/posts/user/{userId}` | Get all posts by a user |
+| GET | `/api/posts/user/{userId}` | Get all posts by user ID |
+| GET | `/api/posts/user/username/{username}` | Get all posts by username |
 | GET | `/api/posts/search?query=` | Search posts by title |
-| GET | `/api/posts/paged?page=0&size=10&sortBy=createdAt` | Get posts paginated |
+| GET | `/api/posts/paged?page=0&size=10&sortBy=createdAt` | Get posts paginated + sorted |
 | GET | `/api/posts/user/{userId}/paged` | Get user posts paginated |
 | PUT | `/api/posts/{id}` | Update a post |
 | DELETE | `/api/posts/{id}` | Delete a post |
@@ -99,7 +98,7 @@ Quillr/
 
 ## 📖 API Documentation
 
-Swagger UI is available at:
+Swagger UI available at:
 ```
 http://localhost:8081/swagger-ui/index.html
 ```
@@ -157,17 +156,17 @@ cd Quillr-Full-Stack-Blogging-Application
 CREATE DATABASE quillr;
 ```
 
-**3. Run the schema** (copy the SQL from above into your database client)
+**3. Run the schema** (copy SQL from above into DataGrip or psql)
 
 **4. Set environment variables**
 
-In IntelliJ → Run/Debug Configurations → Environment Variables:
+IntelliJ → Run/Debug Configurations → Environment Variables:
 ```
 DB_USERNAME=your_postgres_username
 DB_PASSWORD=your_postgres_password
 ```
 
-Or in PowerShell:
+PowerShell:
 ```powershell
 $env:DB_USERNAME="your_postgres_username"
 $env:DB_PASSWORD="your_postgres_password"
@@ -178,7 +177,7 @@ $env:DB_PASSWORD="your_postgres_password"
 ./mvnw spring-boot:run
 ```
 
-The API runs at `http://localhost:8081`
+API runs at `http://localhost:8081`
 Swagger UI at `http://localhost:8081/swagger-ui/index.html`
 
 ---
@@ -210,13 +209,13 @@ POST /api/posts/create
 {
     "userId": 1,
     "title": "My First Post on Quillr",
-    "content": "Hello world! This is my first entry."
+    "content": "Hello world!"
 }
 ```
 
 **Search Posts**
 ```
-GET /api/posts/search?query=Death Note
+GET /api/posts/search?query=hello
 ```
 
 **Get Posts Paginated**
@@ -224,13 +223,28 @@ GET /api/posts/search?query=Death Note
 GET /api/posts/paged?page=0&size=10&sortBy=createdAt
 ```
 
+**Find User by Username**
+```
+GET /api/users/username/narcis
+```
+
+**Get Posts by Username**
+```
+GET /api/posts/user/username/narcis
+```
+
+**Get Profile by Username**
+```
+GET /api/profile/username/narcis
+```
+
 **Update Profile**
 ```json
 PUT /api/profile/1
 {
-    "bio": "Software Developer & Writer",
-    "avatarUrl": "https://example.com/avatar.png",
-    "website": "https://narcis47.github.io"
+  "bio": "Software Developer & Writer",
+  "avatarUrl": "https://example.com/avatar.png",
+  "website": "https://narcis47.github.io"
 }
 ```
 
