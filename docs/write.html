@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quillr — Write</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap">
+    <link rel="stylesheet" href="shared.css">
+    <style>
+        .write-page {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 6rem;
+        }
+
+        .write-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.75rem;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .write-topbar-left { display:flex; align-items:center; gap:0.75rem; }
+        .write-topbar-right { display:flex; gap:0.5rem; }
+
+        .edit-badge {
+            display: none;
+            align-items: center;
+            gap: 0.35rem;
+            font-size: 0.75rem;
+            color: var(--accent);
+            background: var(--accent-dim);
+            border: 1px solid rgba(99,102,241,0.25);
+            border-radius: 100px;
+            padding: 3px 10px;
+        }
+        .edit-badge.visible { display:inline-flex; }
+
+        /* Title */
+        #titleInput {
+            width: 100%;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            font-weight: 700;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border);
+            border-radius: 0;
+            padding: 0.5rem 0 0.75rem;
+            margin-bottom: 1.25rem;
+            color: var(--text);
+            letter-spacing: -0.01em;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #titleInput:focus { border-bottom-color: var(--accent); box-shadow:none; }
+        #titleInput::placeholder { color: var(--text-muted); opacity:0.45; }
+
+        /* Toolbar */
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-bottom: none;
+            border-radius: var(--radius) var(--radius) 0 0;
+            padding: 0.5rem 0.6rem;
+        }
+
+        .toolbar-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-family: inherit;
+            font-weight: 600;
+            transition: background 0.15s, color 0.15s;
+            position: relative;
+        }
+        .toolbar-btn:hover { background: var(--surface-2); color: var(--text); }
+        .toolbar-btn.active { background: var(--accent-dim); color: var(--accent); }
+        .toolbar-btn[title]:hover::after {
+            content: attr(title);
+            position: absolute;
+            bottom: -28px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 10;
+            color: var(--text);
+            font-weight: 400;
+        }
+
+        .toolbar-sep {
+            width: 1px;
+            height: 22px;
+            background: var(--border);
+            margin: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .toolbar select {
+            width: auto;
+            height: 30px;
+            padding: 0 0.5rem;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            background: var(--surface-2);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+            cursor: pointer;
+        }
+        .toolbar select:focus { box-shadow:none; }
+
+        /* Editor area */
+        #editor {
+            min-height: 460px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 var(--radius) var(--radius);
+            padding: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.85;
+            color: #d0d0d8;
+            outline: none;
+            caret-color: var(--accent);
+            word-break: break-word;
+        }
+        #editor:empty::before {
+            content: attr(data-placeholder);
+            color: var(--text-muted);
+            opacity: 0.45;
+            pointer-events: none;
+        }
+        #editor:focus { border-color: var(--accent); }
+
+        /* Rich text styles inside editor */
+        #editor h1 { font-family:'Playfair Display',Georgia,serif; font-size:1.8rem; font-weight:700; color:var(--text); margin:0.5rem 0 0.25rem; }
+        #editor h2 { font-family:'Playfair Display',Georgia,serif; font-size:1.35rem; font-weight:700; color:var(--text); margin:0.5rem 0 0.25rem; }
+        #editor h3 { font-family:'Playfair Display',Georgia,serif; font-size:1.1rem; font-weight:700; color:var(--text); margin:0.5rem 0 0.25rem; }
+        #editor p  { margin: 0 0 0.25rem; }
+        #editor blockquote {
+            border-left: 3px solid var(--accent);
+            padding: 0.5rem 1rem;
+            color: var(--text-muted);
+            margin: 0.75rem 0;
+            font-style: italic;
+            background: var(--accent-dim);
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        }
+        #editor a { color: var(--accent); text-decoration: underline; }
+        #editor ul, #editor ol { padding-left: 1.5rem; margin: 0.25rem 0; }
+        #editor li { margin: 0.1rem 0; }
+        #editor code {
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 0.1em 0.4em;
+            font-family: monospace;
+            font-size: 0.875em;
+            color: #a5b4fc;
+        }
+        #editor hr { border:none; border-top:1px solid var(--border); margin:1rem 0; }
+
+        /* Footer */
+        .write-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .word-count { font-size:0.78rem; color:var(--text-muted); }
+
+        /* Link modal */
+        .link-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 300;
+            align-items: center;
+            justify-content: center;
+        }
+        .link-modal.open { display:flex; }
+        .link-modal-box {
+            background: var(--surface);
+            border: 1px solid var(--border-hover);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            width: 360px;
+            max-width: 90vw;
+        }
+        .link-modal-box h3 { font-size:1rem; font-weight:600; margin-bottom:1rem; }
+        .link-modal-actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top:1rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="library.html" class="nav-brand">Quillr 🪶</a>
+    <div class="nav-actions">
+        <a href="#" class="btn btn-ghost" id="navProfile">Profile</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+</nav>
+
+<div class="page">
+    <div class="write-page">
+
+        <!-- Top bar -->
+        <div class="write-topbar">
+            <div class="write-topbar-left">
+                <a href="library.html" class="btn btn-ghost btn-sm">← Back</a>
+                <span class="edit-badge" id="editBadge">✎ Editing</span>
+            </div>
+            <div class="write-topbar-right">
+                <button class="btn btn-ghost" id="cancelBtn">Discard</button>
+                <button class="btn btn-primary" id="publishBtn">Publish →</button>
+            </div>
+        </div>
+
+        <!-- Title -->
+        <input id="titleInput" type="text" placeholder="Your title…" maxlength="255" autocomplete="off">
+
+        <!-- Toolbar -->
+        <div class="toolbar" id="toolbar">
+            <!-- Heading size -->
+            <select id="blockFormat" title="Text style">
+                <option value="p">Paragraph</option>
+                <option value="h1">Heading 1</option>
+                <option value="h2">Heading 2</option>
+                <option value="h3">Heading 3</option>
+                <option value="blockquote">Quote</option>
+            </select>
+
+            <div class="toolbar-sep"></div>
+
+            <!-- Font size -->
+            <select id="fontSize" title="Font size">
+                <option value="3">Normal</option>
+                <option value="1">Small</option>
+                <option value="4">Large</option>
+                <option value="5">X-Large</option>
+                <option value="6">XX-Large</option>
+            </select>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" data-cmd="bold"          title="Bold (Ctrl+B)"><b>B</b></button>
+            <button class="toolbar-btn" data-cmd="italic"        title="Italic (Ctrl+I)"><i>I</i></button>
+            <button class="toolbar-btn" data-cmd="underline"     title="Underline (Ctrl+U)"><u>U</u></button>
+            <button class="toolbar-btn" data-cmd="strikeThrough" title="Strikethrough"><s>S</s></button>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" data-cmd="justifyLeft"   title="Align left">⬅</button>
+            <button class="toolbar-btn" data-cmd="justifyCenter" title="Center">≡</button>
+            <button class="toolbar-btn" data-cmd="justifyRight"  title="Align right">➡</button>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" data-cmd="insertUnorderedList" title="Bullet list">• ≡</button>
+            <button class="toolbar-btn" data-cmd="insertOrderedList"   title="Numbered list">1 ≡</button>
+            <button class="toolbar-btn" data-cmd="indent"              title="Indent">⇥</button>
+            <button class="toolbar-btn" data-cmd="outdent"             title="Outdent">⇤</button>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" id="linkBtn"             title="Insert link">🔗</button>
+            <button class="toolbar-btn" data-cmd="insertHorizontalRule" title="Divider">—</button>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" data-cmd="undo"          title="Undo (Ctrl+Z)">↩</button>
+            <button class="toolbar-btn" data-cmd="redo"          title="Redo (Ctrl+Y)">↪</button>
+
+            <div class="toolbar-sep"></div>
+
+            <button class="toolbar-btn" data-cmd="removeFormat"  title="Clear formatting">✕</button>
+        </div>
+
+        <!-- Editor -->
+        <div id="editor" contenteditable="true" data-placeholder="Tell your story…" spellcheck="true"></div>
+
+        <!-- Footer -->
+        <div class="write-footer">
+            <span class="word-count"><span id="wordCount">0</span> words</span>
+        </div>
+
+    </div>
+</div>
+
+<!-- Link modal -->
+<div class="link-modal" id="linkModal">
+    <div class="link-modal-box">
+        <h3>Insert link</h3>
+        <div class="field-group">
+            <label class="field-label" for="linkUrl">URL</label>
+            <input type="url" id="linkUrl" placeholder="https://…">
+        </div>
+        <div class="link-modal-actions">
+            <button class="btn btn-ghost" id="cancelLink">Cancel</button>
+            <button class="btn btn-primary" id="confirmLink">Insert</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+(() => {
+    session.requireAuth();
+    document.getElementById('navProfile').href = `profile.html?username=${session.username}`;
+    document.getElementById('logoutBtn').addEventListener('click', () => { session.clear(); window.location.href='index.html'; });
+
+    const params     = new URLSearchParams(location.search);
+    const editId     = params.get('edit');
+    const editor     = document.getElementById('editor');
+    const titleInput = document.getElementById('titleInput');
+    const publishBtn = document.getElementById('publishBtn');
+
+    if (editId) {
+        document.getElementById('editBadge').classList.add('visible');
+        publishBtn.textContent = 'Save changes →';
+    }
+
+    function showToast(msg, type='') {
+        const t = document.getElementById('toast');
+        t.textContent=msg; t.className=type; t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),3000);
+    }
+
+    /* ── Word count ── */
+    function updateWordCount() {
+        const text = editor.innerText || '';
+        const count = text.trim().split(/\s+/).filter(Boolean).length;
+        document.getElementById('wordCount').textContent = count;
+    }
+    editor.addEventListener('input', updateWordCount);
+
+    /* ── Toolbar active state ── */
+    function updateToolbarState() {
+        document.querySelectorAll('.toolbar-btn[data-cmd]').forEach(btn => {
+            try {
+                btn.classList.toggle('active', document.queryCommandState(btn.dataset.cmd));
+            } catch {}
+        });
+
+        // Sync block format select
+        const sel = document.getElementById('blockFormat');
+        const node = window.getSelection()?.anchorNode;
+        if (node) {
+            const block = node.nodeType===3 ? node.parentElement : node;
+            const tag = block?.tagName?.toLowerCase() || 'p';
+            const map = { h1:'h1', h2:'h2', h3:'h3', blockquote:'blockquote' };
+            sel.value = map[tag] || 'p';
+        }
+    }
+
+    document.addEventListener('selectionchange', updateToolbarState);
+    editor.addEventListener('keyup', updateToolbarState);
+
+    /* ── Exec commands ── */
+    document.querySelectorAll('.toolbar-btn[data-cmd]').forEach(btn => {
+        btn.addEventListener('mousedown', e => {
+            e.preventDefault(); // don't lose selection
+            editor.focus();
+            document.execCommand(btn.dataset.cmd, false, null);
+            updateToolbarState();
+        });
+    });
+
+    /* ── Block format (heading/quote) ── */
+    document.getElementById('blockFormat').addEventListener('change', e => {
+        editor.focus();
+        document.execCommand('formatBlock', false, e.target.value);
+        updateToolbarState();
+    });
+
+    /* ── Font size ── */
+    document.getElementById('fontSize').addEventListener('change', e => {
+        editor.focus();
+        document.execCommand('fontSize', false, e.target.value);
+        // Reset select visually
+        e.target.value = '3';
+    });
+
+    /* ── Link modal ── */
+    let savedRange = null;
+
+    document.getElementById('linkBtn').addEventListener('mousedown', e => {
+        e.preventDefault();
+        // Save selection before modal opens
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
+        document.getElementById('linkUrl').value = '';
+        document.getElementById('linkModal').classList.add('open');
+        setTimeout(()=>document.getElementById('linkUrl').focus(), 50);
+    });
+
+    document.getElementById('cancelLink').addEventListener('click', () => {
+        document.getElementById('linkModal').classList.remove('open');
+    });
+
+    document.getElementById('confirmLink').addEventListener('click', () => {
+        const url = document.getElementById('linkUrl').value.trim();
+        if (!url) return;
+        document.getElementById('linkModal').classList.remove('open');
+        editor.focus();
+        if (savedRange) {
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(savedRange);
+        }
+        document.execCommand('createLink', false, url);
+    });
+
+    document.getElementById('linkUrl').addEventListener('keydown', e => {
+        if (e.key==='Enter') document.getElementById('confirmLink').click();
+    });
+
+    /* ── Load existing post (edit mode) ── */
+    if (editId) {
+        (async () => {
+            try {
+                const post = await api.getPost(editId);
+                if (String(post.userId) !== String(session.userId)) {
+                    showToast('Not authorized','error');
+                    setTimeout(()=>location.href='library.html',1200);
+                    return;
+                }
+                titleInput.value  = post.title;
+                editor.innerHTML  = post.content;
+                updateWordCount();
+            } catch(e) { showToast(e.message,'error'); }
+        })();
+    }
+
+    /* ── Discard ── */
+    document.getElementById('cancelBtn').addEventListener('click', () => history.back());
+
+    /* ── Publish / Save ── */
+    publishBtn.addEventListener('click', async () => {
+        const title   = titleInput.value.trim();
+        const content = editor.innerHTML.trim();
+
+        if (!title)                      { showToast('Please add a title.','error');   titleInput.focus(); return; }
+        if (!editor.innerText.trim())    { showToast('Please add some content.','error'); editor.focus(); return; }
+
+        publishBtn.disabled = true;
+        publishBtn.textContent = 'Saving…';
+
+        try {
+            let saved;
+            if (editId) {
+                saved = await api.updatePost(editId, title, content);
+            } else {
+                saved = await api.createPost(+session.userId, title, content);
+            }
+            showToast(editId ? 'Post updated!' : 'Post published!', 'success');
+            setTimeout(()=>location.href=`post.html?id=${saved.id||editId}`, 900);
+        } catch(e) {
+            showToast(e.message,'error');
+            publishBtn.disabled=false;
+            publishBtn.textContent = editId ? 'Save changes →' : 'Publish →';
+        }
+    });
+
+    /* ── Paste as plain text to avoid style bleed ── */
+    editor.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = e.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
+    });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quillr — Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap">
+    <link rel="stylesheet" href="shared.css">
+    <style>
+        .settings-page { max-width:600px; margin:0 auto; padding:3rem 1.5rem 6rem; }
+        .settings-page h1 {
+            font-family:'Playfair Display',Georgia,serif;
+            font-size:1.8rem;
+            font-weight:700;
+            margin-bottom:0.25rem;
+        }
+        .settings-page > p { color:var(--text-muted); font-size:0.9rem; margin-bottom:2rem; }
+
+        .settings-section {
+            background:var(--surface);
+            border:1px solid var(--border);
+            border-radius:var(--radius);
+            padding:1.75rem;
+            margin-bottom:1.25rem;
+        }
+        .settings-section h2 {
+            font-size:0.8rem;
+            font-weight:500;
+            letter-spacing:0.08em;
+            text-transform:uppercase;
+            color:var(--text-muted);
+            margin-bottom:1.25rem;
+        }
+
+        .avatar-preview-row {
+            display:flex;
+            align-items:center;
+            gap:1rem;
+            margin-bottom:1.25rem;
+        }
+        .avatar-preview-row .avatar { width:56px; height:56px; font-size:1.2rem; }
+
+        .form-footer {
+            display:flex;
+            justify-content:flex-end;
+            gap:0.75rem;
+            margin-top:1.5rem;
+        }
+
+        .info-row {
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            padding:0.65rem 0;
+            border-bottom:1px solid var(--border);
+            font-size:0.875rem;
+        }
+        .info-row:last-child { border-bottom:none; }
+        .info-row span:first-child { color:var(--text-muted); }
+        .info-row span:last-child  { color:var(--text); font-weight:500; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="library.html" class="nav-brand">Quillr 🪶</a>
+    <div class="nav-actions">
+        <a href="#" class="btn btn-ghost" id="navProfile">Profile</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+</nav>
+
+<div class="page">
+    <div class="settings-page">
+        <h1>Settings</h1>
+        <p>Manage your public profile and account information.</p>
+
+        <!-- Profile section -->
+        <div class="settings-section" id="profileSection">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+
+        <!-- Account info (read-only) -->
+        <div class="settings-section" id="accountSection">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+
+        <!-- Danger zone -->
+        <div class="settings-section">
+            <h2>Session</h2>
+            <div class="info-row">
+                <span>Signed in as</span>
+                <span id="signedInAs">…</span>
+            </div>
+            <div class="form-footer">
+                <button class="btn btn-danger" id="logoutBig">Sign out of Quillr</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+(() => {
+    session.requireAuth();
+    const navProfile = document.getElementById('navProfile');
+    navProfile.href  = `profile.html?username=${session.username}`;
+
+    function logout() { session.clear(); window.location.href='index.html'; }
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+    document.getElementById('logoutBig').addEventListener('click', logout);
+    document.getElementById('signedInAs').textContent = `@${session.username}`;
+
+    function showToast(msg,type='') {
+        const t=document.getElementById('toast');
+        t.textContent=msg; t.className=type; t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),3500);
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function initials(name) { return name?name.slice(0,2).toUpperCase():'??'; }
+
+    function formatDate(str) {
+        return new Date(str).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    }
+
+    async function load() {
+        try {
+            const [user, profile] = await Promise.all([
+                api.getUser(session.userId),
+                api.getProfile(session.userId)
+            ]);
+
+            // Profile form
+            const avatarSrc = profile?.avatarUrl
+                ? `<img src="${escHtml(profile.avatarUrl)}" alt="avatar">`
+                : initials(user.username);
+
+            document.getElementById('profileSection').innerHTML = `
+                <h2>Public profile</h2>
+                <div class="avatar-preview-row">
+                    <div class="avatar" id="avatarPreview" style="width:56px;height:56px;font-size:1.2rem;">${avatarSrc}</div>
+                    <span style="font-size:0.8rem;color:var(--text-muted);">Preview updates as you type a URL below</span>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="bioInput">Bio</label>
+                    <textarea id="bioInput" rows="3" placeholder="Tell readers about yourself…">${escHtml(profile?.bio||'')}</textarea>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="avatarInput">Avatar URL</label>
+                    <input id="avatarInput" type="url" placeholder="https://…" value="${escHtml(profile?.avatarUrl||'')}">
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="websiteInput">Website</label>
+                    <input id="websiteInput" type="url" placeholder="https://yoursite.com" value="${escHtml(profile?.website||'')}">
+                </div>
+                <div class="form-footer">
+                    <a href="profile.html?userId=${session.userId}" class="btn btn-ghost">View profile</a>
+                    <button class="btn btn-primary" id="saveProfile">Save changes</button>
+                </div>
+            `;
+
+            // Live avatar preview
+            document.getElementById('avatarInput').addEventListener('input', e => {
+                const url  = e.target.value.trim();
+                const prev = document.getElementById('avatarPreview');
+                prev.innerHTML = url ? `<img src="${escHtml(url)}" alt="avatar">` : initials(user.username);
+            });
+
+            document.getElementById('saveProfile').addEventListener('click', async () => {
+                const btn     = document.getElementById('saveProfile');
+                const bio     = document.getElementById('bioInput').value.trim();
+                const avatarUrl = document.getElementById('avatarInput').value.trim();
+                const website = document.getElementById('websiteInput').value.trim();
+
+                btn.disabled = true; btn.textContent = 'Saving…';
+                try {
+                    await api.updateProfile(session.userId, { bio, avatarUrl, website });
+                    showToast('Profile updated!','success');
+                } catch(e) { showToast(e.message,'error'); }
+                finally { btn.disabled=false; btn.textContent='Save changes'; }
+            });
+
+            // Account info
+            document.getElementById('accountSection').innerHTML = `
+                <h2>Account info</h2>
+                <div class="info-row">
+                    <span>Username</span>
+                    <span>@${escHtml(user.username)}</span>
+                </div>
+                <div class="info-row">
+                    <span>Email</span>
+                    <span>${escHtml(user.email)}</span>
+                </div>
+                <div class="info-row">
+                    <span>Member since</span>
+                    <span>${formatDate(user.createdAt)}</span>
+                </div>
+                <div class="info-row">
+                    <span>User ID</span>
+                    <span>#${user.id}</span>
+                </div>
+            `;
+
+        } catch(e) { showToast(e.message,'error'); }
+    }
+
+    load();
+})();
+</script>
+</body>
+</html>

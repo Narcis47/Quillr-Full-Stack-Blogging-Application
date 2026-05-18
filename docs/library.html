@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quillr — Library</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap">
+    <link rel="stylesheet" href="shared.css">
+    <style>
+        .library-hero {
+            padding: 3rem 0 2rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 2rem;
+        }
+        .library-hero h1 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(1.8rem, 4vw, 2.8rem);
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        .library-hero p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* ── Search type tabs ── */
+        .search-tabs {
+            display: flex;
+            gap: 0;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            width: fit-content;
+            margin-bottom: 0.75rem;
+        }
+        .search-tab {
+            padding: 0.45rem 1rem;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 500;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+        }
+        .search-tab:not(:last-child) { border-right: 1px solid var(--border); }
+        .search-tab.active {
+            background: var(--accent);
+            color: #fff;
+        }
+        .search-tab:not(.active):hover { background: var(--surface-2); color: var(--text); }
+
+        /* ── Search bar ── */
+        .search-bar {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .search-bar input { flex: 1; }
+
+        /* ── Sort row ── */
+        .sort-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .sort-label { font-size: 0.8rem; color: var(--text-muted); }
+        .sort-row select { width: auto; padding: 0.4rem 0.75rem; font-size: 0.85rem; }
+
+        /* ── Grids ── */
+        .posts-grid { display: grid; gap: 1rem; }
+
+        /* ── User card ── */
+        .user-card {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.1rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+            transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+        }
+        .user-card:hover {
+            border-color: var(--border-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+        }
+        .user-card-info { flex: 1; min-width: 0; }
+        .user-card-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text);
+            margin-bottom: 0.2rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-card-bio {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .user-card-arrow {
+            color: var(--text-muted);
+            font-size: 1rem;
+            flex-shrink: 0;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .user-card:hover .user-card-arrow { color: var(--accent); transform: translateX(3px); }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="library.html" class="nav-brand">Quillr 🪶</a>
+    <div class="nav-actions">
+        <a href="write.html" class="btn btn-primary">✦ Write</a>
+        <a href="#" class="btn btn-ghost" id="navProfile">Profile</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+</nav>
+
+<div class="page">
+    <div class="container">
+        <div class="library-hero">
+            <h1>What's being written</h1>
+            <p>Discover stories and ideas from the Quillr community.</p>
+        </div>
+
+        <!-- Search type toggle -->
+        <div class="search-tabs">
+            <button class="search-tab active" id="tabPosts">📝 Posts</button>
+            <button class="search-tab"        id="tabUsers">👤 People</button>
+        </div>
+
+        <!-- Search bar -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search posts by title…">
+            <button class="btn btn-ghost" id="searchBtn">Search</button>
+            <button class="btn btn-ghost btn-sm" id="clearBtn" style="display:none">✕ Clear</button>
+        </div>
+
+        <!-- Sort (posts only) -->
+        <div class="sort-row" id="sortRow">
+            <span class="sort-label" id="resultsLabel">All posts</span>
+            <select id="sortBy">
+                <option value="createdAt">Latest first</option>
+                <option value="title">Title A–Z</option>
+            </select>
+        </div>
+
+        <!-- Results -->
+        <div id="postsGrid" class="posts-grid">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+
+        <div id="pagination" class="pagination"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+(() => {
+    session.requireAuth();
+    document.getElementById('navProfile').href = `profile.html?username=${session.username}`;
+    document.getElementById('logoutBtn').addEventListener('click', () => { session.clear(); window.location.href = 'index.html'; });
+
+    let currentPage  = 0;
+    let totalPages   = 1;
+    let sortBy       = 'createdAt';
+    let searchMode   = false;
+    let activeTab    = 'posts'; // 'posts' | 'users'
+
+    const grid       = document.getElementById('postsGrid');
+    const pagination = document.getElementById('pagination');
+    const label      = document.getElementById('resultsLabel');
+    const sortRow    = document.getElementById('sortRow');
+    const searchInput = document.getElementById('searchInput');
+
+    /* ── Helpers ── */
+    function showToast(msg, type = '') {
+        const t = document.getElementById('toast');
+        t.textContent = msg; t.className = type; t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function formatDate(str) {
+        return new Date(str).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function escHtml(s) {
+        return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function initials(name) { return name ? name.slice(0, 2).toUpperCase() : '??'; }
+
+    /* ── Username cache ── */
+    const userCache = {};
+    async function getUsername(userId) {
+        if (userCache[userId]) return userCache[userId];
+        try { const u = await api.getUser(userId); userCache[userId] = u.username; return u.username; }
+        catch { return 'unknown'; }
+    }
+
+    /* ── Render: post card ── */
+    function renderPost(post, username) {
+        const raw     = post.content ? post.content.replace(/<[^>]+>/g, '') : '';
+        const excerpt = raw.length > 140 ? raw.slice(0, 140) + '…' : raw;
+        const name    = username || post.username || 'unknown';
+        return `
+        <a href="post.html?id=${post.id}" class="post-card">
+            <div class="post-card-title">${escHtml(post.title)}</div>
+            <div class="post-card-excerpt">${escHtml(excerpt)}</div>
+            <div class="post-card-meta">
+                <span>By <a href="profile.html?userId=${post.userId}" onclick="event.stopPropagation()">@${escHtml(name)}</a></span>
+                <span>·</span>
+                <span>${formatDate(post.createdAt)}</span>
+            </div>
+        </a>`;
+    }
+
+    /* ── Render: user card ── */
+    function renderUser(user, profile) {
+        const avatarHtml = profile?.avatarUrl
+            ? `<a href="profile.html?userId=${user.id}" class="avatar"><img src="${escHtml(profile.avatarUrl)}" alt="${escHtml(user.username)}"></a>`
+            : `<a href="profile.html?userId=${user.id}" class="avatar">${initials(user.username)}</a>`;
+        return `
+        <a href="profile.html?userId=${user.id}" class="user-card">
+            ${avatarHtml}
+            <div class="user-card-info">
+                <div class="user-card-name">@${escHtml(user.username)}</div>
+                ${profile?.bio ? `<div class="user-card-bio">${escHtml(profile.bio)}</div>` : '<div class="user-card-bio">No bio yet</div>'}
+            </div>
+            <span class="user-card-arrow">→</span>
+        </a>`;
+    }
+
+    /* ── Pagination ── */
+    function renderPagination() {
+        if (searchMode || totalPages <= 1 || activeTab === 'users') { pagination.innerHTML = ''; return; }
+        let html = `<button class="page-btn" id="prevBtn" ${currentPage === 0 ? 'disabled' : ''}>← Prev</button>`;
+        const start = Math.max(0, currentPage - 2);
+        const end   = Math.min(totalPages - 1, currentPage + 2);
+        for (let i = start; i <= end; i++) {
+            html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i + 1}</button>`;
+        }
+        html += `<button class="page-btn" id="nextBtn" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>Next →</button>`;
+        pagination.innerHTML = html;
+        pagination.querySelectorAll('[data-page]').forEach(btn =>
+            btn.addEventListener('click', () => { currentPage = +btn.dataset.page; loadPaged(); }));
+        pagination.querySelector('#prevBtn')?.addEventListener('click', () => { currentPage--; loadPaged(); });
+        pagination.querySelector('#nextBtn')?.addEventListener('click', () => { currentPage++; loadPaged(); });
+    }
+
+    /* ── Load: paged posts ── */
+    async function loadPaged() {
+        grid.innerHTML = '<div class="loading-state"><div class="spinner"></div></div>';
+        try {
+            const data  = await api.getPagedPosts(currentPage, 10, sortBy);
+            const posts = data.content || data;
+            totalPages  = data.totalPages || 1;
+            label.textContent = `${data.totalElements || posts.length} posts`;
+            if (!posts.length) {
+                grid.innerHTML = '<div class="empty-state"><h3>No posts yet</h3><p>Be the first to write something.</p></div>';
+            } else {
+                const usernames = await Promise.all(posts.map(p => getUsername(p.userId)));
+                grid.innerHTML  = posts.map((p, i) => renderPost(p, usernames[i])).join('');
+            }
+            renderPagination();
+        } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    /* ── Load: post search ── */
+    async function loadPostSearch(query) {
+        grid.innerHTML   = '<div class="loading-state"><div class="spinner"></div></div>';
+        pagination.innerHTML = '';
+        try {
+            const posts = await api.searchPosts(query);
+            label.textContent = `${posts.length} result${posts.length === 1 ? '' : 's'} for "${query}"`;
+            if (!posts.length) {
+                grid.innerHTML = `<div class="empty-state"><h3>No posts found</h3><p>Try a different search term.</p></div>`;
+            } else {
+                const usernames = await Promise.all(posts.map(p => getUsername(p.userId)));
+                grid.innerHTML  = posts.map((p, i) => renderPost(p, usernames[i])).join('');
+            }
+        } catch(e) { showToast(e.message, 'error'); }
+    }
+
+    /* ── Load: user search ── */
+    async function loadUserSearch(query) {
+        grid.innerHTML   = '<div class="loading-state"><div class="spinner"></div></div>';
+        pagination.innerHTML = '';
+        label.textContent = `Searching people…`;
+        try {
+            // API: GET /api/users/username/{username}
+            const user = await api.getUserByUsername(query);
+            // Also fetch their profile for bio/avatar
+            let profile = null;
+            try { profile = await api.getProfile(user.id); } catch {}
+            label.textContent = `1 person found`;
+            grid.innerHTML = renderUser(user, profile);
+        } catch(e) {
+            label.textContent = `0 people found`;
+            grid.innerHTML = `<div class="empty-state"><h3>No user found</h3><p>No account matches "<strong>${escHtml(query)}</strong>". Usernames are exact.</p></div>`;
+        }
+    }
+
+    /* ── Tab switching ── */
+    document.getElementById('tabPosts').addEventListener('click', () => {
+        if (activeTab === 'posts') return;
+        activeTab = 'posts';
+        document.getElementById('tabPosts').classList.add('active');
+        document.getElementById('tabUsers').classList.remove('active');
+        searchInput.placeholder = 'Search posts by title…';
+        sortRow.style.display   = '';
+        clearSearch();
+    });
+
+    document.getElementById('tabUsers').addEventListener('click', () => {
+        if (activeTab === 'users') return;
+        activeTab = 'users';
+        document.getElementById('tabUsers').classList.add('active');
+        document.getElementById('tabPosts').classList.remove('active');
+        searchInput.placeholder = 'Search by exact username…';
+        sortRow.style.display   = 'none';
+        pagination.innerHTML    = '';
+        grid.innerHTML = '<div class="empty-state"><h3>Find a writer</h3><p>Type an exact username and press Search.</p></div>';
+        label.textContent = '';
+        searchInput.focus();
+    });
+
+    /* ── Search trigger ── */
+    function triggerSearch() {
+        const q = searchInput.value.trim();
+        if (!q) return;
+        searchMode = true;
+        document.getElementById('clearBtn').style.display = '';
+        if (activeTab === 'posts') loadPostSearch(q);
+        else                       loadUserSearch(q);
+    }
+
+    function clearSearch() {
+        searchMode = false;
+        searchInput.value = '';
+        document.getElementById('clearBtn').style.display = 'none';
+        if (activeTab === 'posts') { currentPage = 0; loadPaged(); }
+        else {
+            grid.innerHTML = '<div class="empty-state"><h3>Find a writer</h3><p>Type an exact username and press Search.</p></div>';
+            label.textContent = '';
+        }
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', triggerSearch);
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') triggerSearch(); });
+    document.getElementById('clearBtn').addEventListener('click', clearSearch);
+
+    document.getElementById('sortBy').addEventListener('change', e => {
+        sortBy = e.target.value;
+        currentPage = 0;
+        if (!searchMode && activeTab === 'posts') loadPaged();
+    });
+
+    /* ── Init ── */
+    loadPaged();
+})();
+</script>
+</body>
+</html>

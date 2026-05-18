@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quillr — Profile</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500&display=swap">
+    <link rel="stylesheet" href="shared.css">
+    <style>
+        .profile-page { padding: 3rem 0 6rem; }
+
+        .profile-header {
+            display:flex;
+            align-items:flex-start;
+            gap:1.5rem;
+            margin-bottom:2rem;
+            flex-wrap:wrap;
+        }
+        .profile-info { flex:1; }
+        .profile-name {
+            font-family:'Playfair Display',Georgia,serif;
+            font-size:1.8rem;
+            font-weight:700;
+            margin-bottom:0.25rem;
+        }
+        .profile-handle { color:var(--text-muted); font-size:0.9rem; margin-bottom:0.75rem; }
+        .profile-bio { color:#c0c0ca; font-size:0.95rem; line-height:1.6; margin-bottom:0.75rem; max-width:500px; }
+        .profile-website {
+            display:inline-flex;
+            align-items:center;
+            gap:0.3rem;
+            color:var(--accent);
+            text-decoration:none;
+            font-size:0.875rem;
+        }
+        .profile-website:hover { opacity:0.75; }
+        .profile-joined { font-size:0.78rem; color:var(--text-muted); margin-top:0.5rem; }
+        .profile-actions { display:flex; gap:0.5rem; align-self:flex-start; margin-top:0.25rem; }
+
+        .posts-section h2 {
+            font-family:'Playfair Display',Georgia,serif;
+            font-size:1.2rem;
+            margin-bottom:1.25rem;
+            color:var(--text-muted);
+            font-weight:700;
+        }
+        .posts-section h2 span { color:var(--text); }
+
+        .posts-list { display:grid; gap:1rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <a href="library.html" class="nav-brand">Quillr 🪶</a>
+    <div class="nav-actions">
+        <a href="write.html" class="btn btn-primary">✦ Write</a>
+        <a href="#" class="btn btn-ghost" id="navProfile">Profile</a>
+        <button class="btn btn-ghost btn-sm" id="logoutBtn">Sign out</button>
+    </div>
+</nav>
+
+<div class="page">
+    <div class="container">
+        <div class="profile-page" id="profileContent">
+            <div class="loading-state"><div class="spinner"></div></div>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+<script src="config.js"></script>
+<script src="api.js"></script>
+<script>
+(() => {
+    session.requireAuth();
+    document.getElementById('navProfile').href = `profile.html?username=${session.username}`;
+    document.getElementById('logoutBtn').addEventListener('click', () => { session.clear(); window.location.href='index.html'; });
+
+    const params   = new URLSearchParams(location.search);
+    const userId   = params.get('userId');
+    const username = params.get('username');
+
+    function showToast(msg,type='') {
+        const t=document.getElementById('toast');
+        t.textContent=msg; t.className=type; t.classList.add('show');
+        setTimeout(()=>t.classList.remove('show'),3000);
+    }
+
+    function formatDate(str) {
+        return new Date(str).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function initials(name) { return name?name.slice(0,2).toUpperCase():'??'; }
+
+    function renderPost(post) {
+        const excerpt = post.content.length>120?post.content.slice(0,120)+'…':post.content;
+        return `
+        <a href="post.html?id=${post.id}" class="post-card">
+            <div class="post-card-title">${escHtml(post.title)}</div>
+            <div class="post-card-excerpt">${escHtml(excerpt)}</div>
+            <div class="post-card-meta">
+                <span>${formatDate(post.createdAt)}</span>
+            </div>
+        </a>`;
+    }
+
+    async function load() {
+        try {
+            let user, profile, posts;
+
+            if (userId) {
+                [user, profile, posts] = await Promise.all([
+                    api.getUser(userId),
+                    api.getProfile(userId),
+                    api.getPostsByUser(userId)
+                ]);
+            } else if (username) {
+                [user, profile, posts] = await Promise.all([
+                    api.getUserByUsername(username),
+                    api.getProfileByUsername(username),
+                    api.getPostsByUsername(username)
+                ]);
+            } else {
+                location.href='library.html'; return;
+            }
+
+            const isOwner = String(user.id) === String(session.userId);
+            document.title = `Quillr — @${user.username}`;
+
+            const avatarHtml = profile?.avatarUrl
+                ? `<a href="#" class="avatar avatar-lg"><img src="${escHtml(profile.avatarUrl)}" alt="${escHtml(user.username)}"></a>`
+                : `<div class="avatar avatar-lg">${initials(user.username)}</div>`;
+
+            document.getElementById('profileContent').innerHTML = `
+                <div class="profile-header">
+                    ${avatarHtml}
+                    <div class="profile-info">
+                        <div class="profile-name">${escHtml(user.username)}</div>
+                        <div class="profile-handle">@${escHtml(user.username)}</div>
+                        ${profile?.bio ? `<div class="profile-bio">${escHtml(profile.bio)}</div>` : ''}
+                        ${profile?.website ? `<a href="${escHtml(profile.website)}" target="_blank" class="profile-website">🔗 ${escHtml(profile.website)}</a>` : ''}
+                        <div class="profile-joined">Joined ${formatDate(user.createdAt)}</div>
+                    </div>
+                    ${isOwner ? `
+                    <div class="profile-actions">
+                        <a href="settings.html" class="btn btn-ghost btn-sm">⚙ Edit profile</a>
+                    </div>` : ''}
+                </div>
+                <div class="divider"></div>
+                <div class="posts-section">
+                    <h2><span>${posts.length}</span> post${posts.length===1?'':'s'}</h2>
+                    ${posts.length
+                        ? `<div class="posts-list">${posts.map(renderPost).join('')}</div>`
+                        : `<div class="empty-state"><h3>No posts yet</h3>${isOwner?`<p><a href="write.html" class="btn btn-primary" style="margin-top:0.75rem">Write your first post</a></p>`:'<p>This writer hasn\'t published anything yet.</p>'}</div>`
+                    }
+                </div>
+            `;
+        } catch(e) {
+            document.getElementById('profileContent').innerHTML =
+                `<div class="empty-state"><h3>User not found</h3><p>${e.message}</p><a href="library.html" class="btn btn-ghost" style="margin-top:1rem">← Back</a></div>`;
+        }
+    }
+
+    load();
+})();
+</script>
+</body>
+</html>

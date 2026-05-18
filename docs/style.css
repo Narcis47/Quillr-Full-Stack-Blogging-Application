@@ -1,0 +1,307 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg:          #0a0a0d;
+    --surface:     #111115;
+    --input-bg:    #1e1e26;
+    --border:      rgba(255,255,255,0.08);
+    --text:        #f0f0f4;
+    --text-muted:  #6b6b78;
+    --accent:      #6366f1;
+    --accent-dim:  rgba(99,102,241,0.12);
+    --accent-glow: rgba(99,102,241,0.25);
+    --radius:      14px;
+    --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+    --transition:  0.7s var(--ease-spring);
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(99,102,241,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4rem;
+    width: min(90%, 1100px);
+    padding: 4rem 0;
+}
+
+/* ── Welcome copy ── */
+.welcome {
+    flex: 1;
+    max-width: 480px;
+}
+
+.eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(99,102,241,0.2);
+    border-radius: 100px;
+    padding: 4px 12px;
+    margin-bottom: 1.5rem;
+}
+
+.welcome h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 1.25rem;
+}
+
+.quill {
+    display: inline-block;
+    margin-left: 0.1em;
+    animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(-5deg); }
+    50%       { transform: translateY(-6px) rotate(5deg); }
+}
+
+.tagline {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin-bottom: 1.75rem;
+}
+
+.perks {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.perks li {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    padding-left: 1.25rem;
+    position: relative;
+}
+
+.perks li::before {
+    content: '✓';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+/* ── Cards stack ── */
+.cards-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    /* wide enough for front card (320px) + 28px right offset of back card */
+    width: 360px;
+    /* tall enough for front card + 30px bottom of back card peeking out */
+    height: 540px;
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    width: 320px;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transition:
+        top var(--transition),
+        left var(--transition),
+        opacity var(--transition),
+        box-shadow var(--transition);
+    cursor: default;
+}
+
+/* FRONT card */
+.card:not(.inactive) {
+    z-index: 5;
+    top: 0;
+    left: 0;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
+}
+
+/* BACK card — shifted down+right so it peeks out below/beside the front */
+.card.inactive {
+    z-index: 1;
+    top: 30px;
+    left: 28px;
+    opacity: 0.55;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+
+.card.inactive:hover {
+    opacity: 0.75;
+}
+
+.card.inactive * {
+    pointer-events: none;
+}
+
+/* ── Card internals ── */
+.card-header {
+    margin-bottom: 1.25rem;
+}
+
+.card-header h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    margin-bottom: 0.75rem;
+}
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent) 0%, transparent 100%);
+    opacity: 0.4;
+}
+
+.card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+    flex: 1;
+}
+
+.field-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 0.4rem;
+}
+
+.card input {
+    background: var(--input-bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 0.875rem;
+    width: 100%;
+    font-family: inherit;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+}
+
+.card input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.card input::placeholder {
+    color: var(--text-muted);
+    opacity: 0.6;
+}
+
+.btn-primary {
+    margin-top: 0.75rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem;
+    width: 100%;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.btn-primary:active {
+    transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.switch-hint {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.15s;
+}
+
+.link-btn:hover { opacity: 0.75; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 3rem 1rem;
+        gap: 3rem;
+    }
+
+    .welcome { max-width: 100%; }
+    .perks { align-items: center; }
+
+    .cards-wrapper {
+        width: 320px;
+        height: 500px;
+    }
+}
