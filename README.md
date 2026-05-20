@@ -4,6 +4,7 @@ A full-stack blogging platform — register, customize your profile, and create,
 
 Built with Java & Spring Boot on the backend, and a vanilla HTML/CSS/JS frontend generated with AI assistance for rapid backend testing and development.
 
+🌐 Live Demo: https://narcis47.github.io/Quillr-Full-Stack-Blogging-Application/
 ---
 
 ## ✨ Features
