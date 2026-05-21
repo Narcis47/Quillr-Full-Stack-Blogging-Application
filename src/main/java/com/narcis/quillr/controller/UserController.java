@@ -1,5 +1,6 @@
 package com.narcis.quillr.controller;
 
+import com.narcis.quillr.JwtService;
 import com.narcis.quillr.model.User;
 import com.narcis.quillr.service.UserService;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +12,14 @@ import java.util.Optional;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
+    private final JwtService jwtService;
     public record RegisterRequest(String username, String email, String password) {}
     public record LoginRequest(String email, String password) {}
+    public record LoginRespone(User user, String token) {}
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/{id}")
@@ -42,7 +46,8 @@ public class UserController {
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest request){
         Optional<User> user = userService.loginUser(request.email(), request.password());
         if (user.isPresent()){
-            return  ResponseEntity.ok(user.get());
+            String token = jwtService.generateToken(user.get().getId(), user.get().getUsername());
+            return  ResponseEntity.ok(new LoginRespone(user.get(), token));
         }
         return ResponseEntity.badRequest().body("Invalid credentials!");
     }

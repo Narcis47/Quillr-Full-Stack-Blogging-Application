@@ -1,5 +1,6 @@
 package com.narcis.quillr.controller;
 
+import com.narcis.quillr.JwtService;
 import com.narcis.quillr.model.Profile;
 import com.narcis.quillr.service.ProfileService;
 import org.springframework.http.ResponseEntity;
@@ -11,10 +12,12 @@ import java.util.Optional;
 @RequestMapping("/api/profile")
 public class ProfileController {
     private final ProfileService profileService;
+    private final JwtService jwtService;
     public record ProfileRequest(String bio, String avatarUrl, String website) {}
 
-    public ProfileController(ProfileService profileService) {
+    public ProfileController(ProfileService profileService, JwtService jwtService) {
         this.profileService = profileService;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/username/{username}")
@@ -30,11 +33,11 @@ public class ProfileController {
     }
 
     @PutMapping("/{userId}")
-    public ResponseEntity<String> updateProfileById(@PathVariable Long userId,@RequestBody ProfileRequest request){
+    public ResponseEntity<String> updateProfileById(@PathVariable Long userId,@RequestBody ProfileRequest request,@RequestHeader("Authorization") String authHead){
+        Long userIdFromToken = jwtService.extractUserId(authHead.substring(7));
+
+        if(!userId.equals(userIdFromToken)) return ResponseEntity.status(403).body("You can only edit your own profile!");
         boolean update = profileService.updateProfile(userId, request.bio(), request.avatarUrl(), request.website());
-        if (update){
-            return ResponseEntity.ok("Profile updated!");
-        }
-        return ResponseEntity.badRequest().body("Cannot update the profile!");
+        return update ? ResponseEntity.ok("Profile Updated!") : ResponseEntity.badRequest().body("Cannot update profile!");
     }
 }

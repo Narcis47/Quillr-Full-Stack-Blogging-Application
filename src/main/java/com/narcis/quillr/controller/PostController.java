@@ -1,5 +1,6 @@
 package com.narcis.quillr.controller;
 
+import com.narcis.quillr.JwtService;
 import com.narcis.quillr.model.Post;
 import com.narcis.quillr.service.PostService;
 import jakarta.validation.Valid;
@@ -17,16 +18,17 @@ import java.util.Optional;
 @RequestMapping("/api/posts")
 public class PostController {
     private final PostService postService;
+    private final JwtService jwtService;
     public record CreateRequest(
-            @NotNull Long userId,
             @NotBlank @Size(min=3, max=255) String title,
             @NotBlank String content) {}
     public record UpdateRequest(
             @NotBlank @Size(min=3, max=255) String title,
             @NotBlank String content) {}
 
-    public PostController(PostService postService) {
+    public PostController(PostService postService, JwtService jwtService) {
         this.postService = postService;
+        this.jwtService = jwtService;
     }
 
     @GetMapping("/{id}")
@@ -73,8 +75,10 @@ public class PostController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<String> createPost(@Valid @RequestBody CreateRequest request){
-        boolean post = postService.createPost(request.userId(), request.title(), request.content());
+    public ResponseEntity<String> createPost(@Valid @RequestBody CreateRequest request, @RequestHeader("Authorization") String authHeader){
+        Long userIdFromToken = jwtService.extractUserId(authHeader.substring(7));
+
+        boolean post = postService.createPost(userIdFromToken, request.title(), request.content());
         if (post){
             return ResponseEntity.ok().body("Post created!");
         }
@@ -82,20 +86,27 @@ public class PostController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<String> updatePost(@PathVariable Long id,@Valid @RequestBody UpdateRequest request){
-        boolean post = postService.updatePost(id, request.title(), request.content());
-        if (post){
-            return ResponseEntity.ok().body("Post updated!");
+    public ResponseEntity<String> updatePost(@PathVariable Long id,@Valid @RequestBody UpdateRequest request, @RequestHeader("Authorization") String authHeader){
+        Long userIdFromToken = jwtService.extractUserId(authHeader.substring(7));
+
+        Optional<Post> post = postService.getPostById(id);
+        if (post.isEmpty()) return ResponseEntity.notFound().build();
+        if (!post.get().getUserId().equals(userIdFromToken)){
+            return ResponseEntity.status(403).body("You can only edit your own posts!");
         }
-        return ResponseEntity.badRequest().body("Post cannot be updated!");
+
+        boolean updated = postService.updatePost(id, request.title(), request.content());
+        return updated ? ResponseEntity.ok("Post updated!") : ResponseEntity.badRequest().body("Post cannot be updated!");
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deletePost(@PathVariable Long id){
-        boolean post = postService.deletePost(id);
-        if (post){
-            return ResponseEntity.ok().body("Post deleted!");
-        }
-        return ResponseEntity.badRequest().body("Post cannot be deleted!");
+    public ResponseEntity<String> deletePost(@PathVariable Long id, @RequestHeader("Authorization") String authHeader){
+        Long userIdFromToken = jwtService.extractUserId(authHeader.substring(7));
+
+        Optional<Post> post = postService.getPostById(id);
+        if (post.isEmpty()) return ResponseEntity.notFound().build();
+        if (!post.get().getUserId().equals(userIdFromToken)) return ResponseEntity.status(403).body("You can delete your own posts!");
+        boolean deleted = postService.deletePost(id);
+        return deleted ? ResponseEntity.ok("Post deleted!") : ResponseEntity.badRequest().body("Post cannot be deleted!");
     }
 }
